@@ -1,6 +1,9 @@
 {
   "/_not-found/page": "app/_not-found/page.js",
+  "/admin/setup-face/page": "app/admin/setup-face/page.js",
+  "/admin/login/page": "app/admin/login/page.js",
   "/page": "app/page.js",
+  "/agenda/page": "app/agenda/page.js",
   "/studio/page": "app/studio/page.js",
-  "/agenda/page": "app/agenda/page.js"
+  "/admin/dashboard/page": "app/admin/dashboard/page.js"
 }

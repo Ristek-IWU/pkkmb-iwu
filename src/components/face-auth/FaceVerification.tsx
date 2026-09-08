@@ -12,13 +12,13 @@ import {
   useState,
   useCallback,
 } from 'react';
-import { Stack, Text, Alert, Button } from '@mantine/core';
+import { Stack, Text, Alert, Button, Progress, Box } from '@mantine/core';
 import { IconAlertCircle, IconRefresh } from '@tabler/icons-react';
 
 import { FaceCamera } from './FaceCamera';
 import { LivenessChallenge } from './LivenessChallenge';
 
-import { loadFaceModels } from '@/lib/face/model-loader';
+import { loadFaceModels, onModelLoadProgress } from '@/lib/face/model-loader';
 import { detectFace } from '@/lib/face/detector';
 import { createEmbedding } from '@/lib/face/embedding';
 import { bestMatch } from '@/lib/face/similarity';
@@ -51,6 +51,7 @@ export function FaceVerification({
 }: FaceVerificationProps) {
   const [authState, setAuthState] = useState<FaceAuthState>('loading-models');
   const [error, setError] = useState<FaceAuthError | null>(null);
+  const [modelProgress, setModelProgress] = useState(0);
 
   // Liveness state
   const [challenges, setChallenges] = useState<LivenessChallengeType[]>([]);

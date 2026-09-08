@@ -13,12 +13,18 @@ export const FACE_AUTH_CONFIG = {
   modelVersion: 'face-model-v1',
 
   // ── Face Detection ───────────────────────────────────────────────────────
-  /** Minimum detection confidence (0–1) */
-  detectionMinConfidence: 0.75,
+  /**
+   * Minimum detection confidence (0–1).
+   * TinyFaceDetector lebih sensitif — nilai 0.5 lebih aman dari 0.75.
+   */
+  detectionMinConfidence: 0.5,
   /** Minimum face box width relative to canvas width (0–1) */
-  minFaceSizeRatio: 0.15,
-  /** SSD input size — tradeoff accuracy vs speed */
-  ssdInputSize: 416,
+  minFaceSizeRatio: 0.12,
+  /**
+   * TinyFaceDetector input size. Pilihan: 128, 160, 224, 320, 416, 512, 608.
+   * 224 = balance antara kecepatan dan akurasi.
+   */
+  tinyDetectorInputSize: 224 as 128 | 160 | 224 | 320 | 416 | 512 | 608,
 
   // ── Recognition ─────────────────────────────────────────────────────────
   /**

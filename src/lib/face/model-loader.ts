@@ -3,7 +3,8 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // Model Loader
 // Lazy-loads @vladmandic/face-api models dari /public/models/face/.
-// Hanya berjalan di browser — tidak pernah di SSR/Node.
+// Menggunakan TinyFaceDetector (190KB) bukan SSD MobileNet (5.5MB)
+// agar load time jauh lebih cepat.
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { FACE_AUTH_CONFIG } from '@/lib/config/face-auth.config';
@@ -12,6 +13,7 @@ type LoadingState = 'idle' | 'loading' | 'loaded' | 'error';
 
 let state: LoadingState = 'idle';
 let loadError: Error | null = null;
+let loadPromise: Promise<void> | null = null;
 
 /** Callback listeners untuk progress UI */
 const listeners: Array<(progress: number, state: LoadingState) => void> = [];
@@ -33,52 +35,50 @@ function notify(progress: number) {
 /**
  * Load semua model yang dibutuhkan.
  * Aman dipanggil berkali-kali — skip jika sudah loaded.
- * Hanya panggil dari useEffect / event handler (bukan top-level module).
+ * Concurrent calls berbagi promise yang sama (tidak double-load).
  */
 export async function loadFaceModels(): Promise<void> {
   if (state === 'loaded') return;
-  if (state === 'loading') {
-    // Tunggu sampai selesai
-    return new Promise((resolve, reject) => {
-      const interval = setInterval(() => {
-        if (state === 'loaded') {
-          clearInterval(interval);
-          resolve();
-        } else if (state === 'error') {
-          clearInterval(interval);
-          reject(loadError);
-        }
-      }, 100);
-    });
-  }
+  if (state === 'error') throw loadError!;
+
+  // Jika sedang loading, return promise yang sama
+  if (loadPromise) return loadPromise;
 
   state = 'loading';
   notify(0);
 
-  try {
-    // Dynamic import — TIDAK pernah di top-level (SSR safe)
-    const faceapi = await import('@vladmandic/face-api');
+  loadPromise = (async () => {
+    try {
+      // Dynamic import — TIDAK pernah di top-level (SSR safe)
+      const faceapi = await import('@vladmandic/face-api');
+      const basePath = FACE_AUTH_CONFIG.modelBasePath;
 
-    const basePath = FACE_AUTH_CONFIG.modelBasePath;
+      notify(5);
 
-    notify(10);
-    await faceapi.nets.ssdMobilenetv1.loadFromUri(basePath);
-    notify(45);
+      // TinyFaceDetector: 190KB — jauh lebih cepat dari ssdMobilenetv1 (5.5MB)
+      await faceapi.nets.tinyFaceDetector.loadFromUri(basePath);
+      notify(35);
 
-    await faceapi.nets.faceLandmark68Net.loadFromUri(basePath);
-    notify(70);
+      // Face Landmark 68: 350KB
+      await faceapi.nets.faceLandmark68Net.loadFromUri(basePath);
+      notify(65);
 
-    await faceapi.nets.faceRecognitionNet.loadFromUri(basePath);
-    notify(100);
+      // Face Recognition: 6.3MB — paling besar, load terakhir
+      await faceapi.nets.faceRecognitionNet.loadFromUri(basePath);
+      notify(100);
 
-    state = 'loaded';
-    notify(100);
-  } catch (err) {
-    state = 'error';
-    loadError = err instanceof Error ? err : new Error(String(err));
-    notify(0);
-    throw loadError;
-  }
+      state = 'loaded';
+      notify(100);
+    } catch (err) {
+      state = 'error';
+      loadError = err instanceof Error ? err : new Error(String(err));
+      loadPromise = null;
+      notify(0);
+      throw loadError;
+    }
+  })();
+
+  return loadPromise;
 }
 
 export function areModelsLoaded(): boolean {
@@ -89,8 +89,13 @@ export function getModelLoadError(): Error | null {
   return loadError;
 }
 
-/** Reset state — hanya untuk testing */
+export function getModelLoadState(): LoadingState {
+  return state;
+}
+
+/** Reset state — hanya untuk testing / hot reload */
 export function _resetModelState() {
   state = 'idle';
   loadError = null;
+  loadPromise = null;
 }

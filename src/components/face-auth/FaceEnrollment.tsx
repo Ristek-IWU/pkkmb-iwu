@@ -3,7 +3,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // FaceEnrollment
 // Ambil N sampel embedding dan simpan ke IndexedDB.
-// Digunakan di /admin/setup-face.
+// Fix: sequential init (models → camera), progress bar nyata, retry.
 // ─────────────────────────────────────────────────────────────────────────────
 
 import {
@@ -20,16 +20,17 @@ import {
   Alert,
   Badge,
   Group,
+  Box,
 } from '@mantine/core';
 import {
   IconAlertCircle,
   IconCheck,
   IconCamera,
+  IconRefresh,
 } from '@tabler/icons-react';
 
 import { FaceCamera } from './FaceCamera';
-
-import { loadFaceModels } from '@/lib/face/model-loader';
+import { loadFaceModels, onModelLoadProgress } from '@/lib/face/model-loader';
 import { detectFace } from '@/lib/face/detector';
 import { createEmbeddingForEnrollment } from '@/lib/face/embedding';
 import { saveFaceProfile } from '@/lib/auth/admin-storage';
@@ -53,32 +54,50 @@ export function FaceEnrollment({
   const [samples, setSamples] = useState<FaceEmbedding[]>([]);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isCapturing, setIsCapturing] = useState(false);
+  const [modelProgress, setModelProgress] = useState(0);
+  const [modelLabel, setModelLabel] = useState('Menyiapkan modul AI...');
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const mountedRef = useRef(true);
 
   const required = FACE_AUTH_CONFIG.requiredSamples;
 
+  // ── Init: load models dulu, BARU camera ────────────────────────────────
+
   useEffect(() => {
     mountedRef.current = true;
+
+    // Subscribe ke progress agar progress bar bergerak
+    const unsub = onModelLoadProgress((progress) => {
+      if (!mountedRef.current) return;
+      setModelProgress(progress);
+      if (progress < 35) setModelLabel('Memuat detektor wajah...');
+      else if (progress < 65) setModelLabel('Memuat landmark model...');
+      else if (progress < 100) setModelLabel('Memuat recognition model...');
+      else setModelLabel('Model siap');
+    });
+
     loadFaceModels()
       .then(() => {
-        if (mountedRef.current) {
-          setEnrollState('idle');
-          setCameraState('requesting-camera');
-        }
+        if (!mountedRef.current) return;
+        // Model selesai → buka kamera (FaceCamera akan react karena state berubah)
+        setCameraState('requesting-camera');
+        setEnrollState('idle');
       })
       .catch(() => {
-        if (mountedRef.current) {
-          setErrorMsg('Modul verifikasi wajah gagal dimuat. Silakan refresh halaman.');
-          setEnrollState('error');
-        }
+        if (!mountedRef.current) return;
+        setErrorMsg('Modul AI gagal dimuat. Coba refresh halaman.');
+        setEnrollState('error');
+        setCameraState('error');
       });
 
     return () => {
       mountedRef.current = false;
+      unsub();
     };
   }, []);
+
+  // ── Camera ready callback ──────────────────────────────────────────────
 
   const handleStreamReady = useCallback((video: HTMLVideoElement) => {
     videoRef.current = video;
@@ -86,7 +105,8 @@ export function FaceEnrollment({
     setEnrollState('capturing');
   }, []);
 
-  /** Tangkap satu sampel secara manual saat user klik tombol */
+  // ── Capture sampel ────────────────────────────────────────────────────
+
   const captureSample = useCallback(async () => {
     if (!videoRef.current || isCapturing) return;
 
@@ -94,45 +114,40 @@ export function FaceEnrollment({
     setErrorMsg(null);
 
     try {
-      // Validasi: harus ada tepat 1 wajah
       const detection = await detectFace(videoRef.current);
-
-      if (!detection.detected) {
-        setErrorMsg('Wajah belum terdeteksi. Pastikan wajah terlihat jelas di kamera.');
-        setIsCapturing(false);
-        return;
-      }
 
       if (detection.faceCount > 1) {
         setErrorMsg('Pastikan hanya satu orang berada di depan kamera.');
-        setIsCapturing(false);
         return;
       }
 
-      // Ambil embedding
-      const result = await createEmbeddingForEnrollment(videoRef.current);
+      if (!detection.detected) {
+        setErrorMsg(
+          'Wajah belum terdeteksi. Pastikan pencahayaan cukup dan wajah terlihat jelas.'
+        );
+        return;
+      }
 
+      const result = await createEmbeddingForEnrollment(videoRef.current);
       if (!result) {
-        setErrorMsg('Foto wajah belum cukup jelas. Coba lebih dekat ke kamera.');
-        setIsCapturing(false);
+        setErrorMsg('Wajah tidak cukup jelas. Coba lebih dekat ke kamera.');
         return;
       }
 
       const newSamples = [...samples, result.embedding];
       setSamples(newSamples);
-      setCameraState('face-detected');
 
-      // Brief flash
+      // Flash feedback
+      setCameraState('face-detected');
       setTimeout(() => {
         if (mountedRef.current) setCameraState('detecting');
-      }, 400);
+      }, 500);
 
-      // Auto-save jika sudah cukup
       if (newSamples.length >= required) {
         await saveProfile(newSamples);
       }
     } catch {
-      setErrorMsg('Terjadi kesalahan. Silakan coba lagi.');
+      setErrorMsg('Terjadi kesalahan saat mengambil sampel. Coba lagi.');
     } finally {
       if (mountedRef.current) setIsCapturing(false);
     }
@@ -141,7 +156,6 @@ export function FaceEnrollment({
   const saveProfile = async (embeddings: FaceEmbedding[]) => {
     setEnrollState('saving');
     setCameraState('recognizing');
-
     try {
       const now = new Date().toISOString();
       await saveFaceProfile({
@@ -152,14 +166,13 @@ export function FaceEnrollment({
         createdAt: now,
         updatedAt: now,
       });
-
       if (mountedRef.current) {
         setEnrollState('done');
         setCameraState('success');
       }
     } catch {
       if (mountedRef.current) {
-        setErrorMsg('Gagal menyimpan profil. Pastikan browser tidak dalam mode privat.');
+        setErrorMsg('Gagal menyimpan. Pastikan browser tidak dalam mode privat.');
         setEnrollState('error');
       }
     }
@@ -172,28 +185,56 @@ export function FaceEnrollment({
     setCameraState('detecting');
   };
 
+  const isModelLoading = cameraState === 'loading-models';
+  const isCameraWaiting = cameraState === 'requesting-camera';
+  const isReady = enrollState === 'capturing' || enrollState === 'idle';
   const progressPercent = Math.round((samples.length / required) * 100);
+
+  // ─────────────────────────────────────────────────────────────────────────
 
   return (
     <Stack gap={20} align="center">
+
+      {/* Model loading progress — tampil terpisah agar jelas */}
+      {isModelLoading && (
+        <Box style={{ width: '100%', maxWidth: 300 }}>
+          <Text size="xs" c="dimmed" mb={6} ta="center">
+            {modelLabel}
+          </Text>
+          <Progress
+            value={modelProgress}
+            color="yellow"
+            size="sm"
+            radius="xl"
+            animated
+            aria-label="Progress loading model AI"
+          />
+          <Text size="xs" c="dimmed" ta="center" mt={4}>
+            {modelProgress}% — Pertama kali mungkin 10–30 detik
+          </Text>
+        </Box>
+      )}
+
+      {/* Camera */}
       <FaceCamera
         state={cameraState}
         size={300}
         onStreamReady={handleStreamReady}
         onError={() => {
           setCameraState('error');
-          setErrorMsg('Akses kamera diperlukan untuk enrollment wajah.');
+          setErrorMsg('Akses kamera diperlukan. Izinkan kamera di browser kamu.');
         }}
       />
 
-      {/* Progress */}
-      {enrollState !== 'done' && (
+      {/* Sample progress — tampil setelah camera aktif */}
+      {!isModelLoading && !isCameraWaiting && enrollState !== 'done' && (
         <Stack gap={6} style={{ width: '100%', maxWidth: 300 }}>
           <Group justify="space-between">
-            <Text size="sm" c="dimmed">
-              Sampel wajah
-            </Text>
-            <Badge color={samples.length >= required ? 'teal' : 'yellow'} variant="light">
+            <Text size="sm" c="dimmed">Sampel wajah</Text>
+            <Badge
+              color={samples.length >= required ? 'teal' : 'yellow'}
+              variant="light"
+            >
               {samples.length} / {required}
             </Badge>
           </Group>
@@ -202,10 +243,10 @@ export function FaceEnrollment({
             color={samples.length >= required ? 'teal' : 'yellow'}
             size="sm"
             radius="xl"
-            aria-label={`Progress enrollment: ${samples.length} dari ${required} sampel`}
+            aria-label={`Progress enrollment: ${samples.length} dari ${required}`}
           />
           <Text size="xs" c="dimmed" ta="center">
-            Variasikan sudut wajah: lurus, sedikit kiri, sedikit kanan
+            Variasikan sudut: lurus · sedikit kiri · sedikit kanan
           </Text>
         </Stack>
       )}
@@ -217,12 +258,14 @@ export function FaceEnrollment({
           color="red"
           radius="md"
           style={{ width: '100%', maxWidth: 300 }}
+          withCloseButton
+          onClose={() => setErrorMsg(null)}
         >
           <Text size="sm">{errorMsg}</Text>
         </Alert>
       )}
 
-      {/* Done state */}
+      {/* Selesai */}
       {enrollState === 'done' ? (
         <Stack gap={8} align="center" style={{ width: '100%', maxWidth: 300 }}>
           <Alert
@@ -231,16 +274,9 @@ export function FaceEnrollment({
             radius="md"
             title="Enrollment berhasil"
           >
-            <Text size="sm">
-              {samples.length} sampel wajah berhasil disimpan.
-            </Text>
+            <Text size="sm">{samples.length} sampel wajah berhasil disimpan.</Text>
           </Alert>
-          <Button
-            fullWidth
-            color="navy.7"
-            onClick={onDone}
-            size="md"
-          >
+          <Button fullWidth color="navy.7" onClick={onDone} size="md" radius="md">
             Selesai
           </Button>
         </Stack>
@@ -254,24 +290,39 @@ export function FaceEnrollment({
             leftSection={<IconCamera size={16} />}
             onClick={captureSample}
             loading={isCapturing}
+            radius="md"
             disabled={
-              enrollState === 'idle' ||
-              enrollState === 'saving' ||
+              isModelLoading ||
+              isCameraWaiting ||
               enrollState === 'error' ||
-              cameraState === 'loading-models' ||
-              cameraState === 'requesting-camera'
+              enrollState === 'saving'
             }
           >
-            {isCapturing ? 'Mengambil sampel...' : 'Ambil Sampel'}
+            {isCapturing ? 'Mengambil...' : 'Ambil Sampel'}
           </Button>
 
-          {samples.length > 0 && (
+          {enrollState === 'error' && (
+            <Button
+              fullWidth
+              size="sm"
+              variant="light"
+              color="gray"
+              leftSection={<IconRefresh size={14} />}
+              onClick={() => window.location.reload()}
+              radius="md"
+            >
+              Refresh Halaman
+            </Button>
+          )}
+
+          {samples.length > 0 && enrollState !== 'error' && (
             <Button
               fullWidth
               size="sm"
               variant="subtle"
               color="gray"
               onClick={handleReset}
+              radius="md"
             >
               Ulang dari awal
             </Button>

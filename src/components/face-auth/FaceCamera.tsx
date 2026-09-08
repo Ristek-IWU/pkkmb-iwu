@@ -36,6 +36,9 @@ export const FaceCamera = forwardRef<FaceCameraHandle, FaceCameraProps>(
     }));
 
     useEffect(() => {
+      // Jangan buka kamera saat masih loading models
+      if (state === 'loading-models') return;
+
       let cancelled = false;
 
       async function startCamera() {
@@ -93,7 +96,7 @@ export const FaceCamera = forwardRef<FaceCameraHandle, FaceCameraProps>(
           videoRef.current.srcObject = null;
         }
       };
-    }, [onStreamReady, onError]);
+    }, [state, onStreamReady, onError]); // state sebagai dependency — re-run saat model selesai
 
     const isLoading =
       state === 'loading-models' || state === 'requesting-camera';
