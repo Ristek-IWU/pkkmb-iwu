@@ -1,0 +1,31 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+  body {
+    @apply antialiased;
+    font-family: var(--font-plus-jakarta-sans), sans-serif;
+  }
+}
+
+@layer components {
+  .container-page {
+    @apply mx-auto max-w-7xl px-4 sm:px-6 lg:px-8;
+  }
+  
+  .section-spacing {
+    @apply py-12 md:py-16 lg:py-20;
+  }
+}
+
+/* Mantine UI inspired styles */
+:root {
+  --iwu-navy: #0A192F;
+  --iwu-navy-secondary: #0F2042;
+  --iwu-purple: #7C3AED;
+  --iwu-gold: #D4AF37;
+}
