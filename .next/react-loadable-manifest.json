@@ -1,35 +1,26 @@
 {
-  "components\\studio\\TwibbonCanvas.tsx -> fabric": {
-    "id": 81377,
-    "files": [
-      "static/chunks/0b465130.1ae67bfd9de4a7ea.js"
-    ]
-  },
   "lib\\auth\\admin-storage.ts -> idb": {
-    "id": 68470,
+    "id": "lib\\auth\\admin-storage.ts -> idb",
     "files": [
-      "static/chunks/470.2aa65625256a403f.js"
+      "static/chunks/_app-pages-browser_node_modules_idb_build_index_js.js"
     ]
   },
   "lib\\face\\detector.ts -> @vladmandic/face-api": {
-    "id": 5175,
+    "id": "lib\\face\\detector.ts -> @vladmandic/face-api",
     "files": [
-      "static/chunks/88603698.7ea45f91b7e40269.js",
-      "static/chunks/145.6a81975bf5f9b95d.js"
+      "static/chunks/_app-pages-browser_node_modules_vladmandic_face-api_dist_face-api_esm_js.js"
     ]
   },
   "lib\\face\\embedding.ts -> @vladmandic/face-api": {
-    "id": 5175,
+    "id": "lib\\face\\embedding.ts -> @vladmandic/face-api",
     "files": [
-      "static/chunks/88603698.7ea45f91b7e40269.js",
-      "static/chunks/145.6a81975bf5f9b95d.js"
+      "static/chunks/_app-pages-browser_node_modules_vladmandic_face-api_dist_face-api_esm_js.js"
     ]
   },
   "lib\\face\\model-loader.ts -> @vladmandic/face-api": {
-    "id": 5175,
+    "id": "lib\\face\\model-loader.ts -> @vladmandic/face-api",
     "files": [
-      "static/chunks/88603698.7ea45f91b7e40269.js",
-      "static/chunks/145.6a81975bf5f9b95d.js"
+      "static/chunks/_app-pages-browser_node_modules_vladmandic_face-api_dist_face-api_esm_js.js"
     ]
   }
 }

@@ -152,14 +152,14 @@ export default function AdminDashboardPage() {
                   label="Frame Twibbon"
                   desc="Kelola frame PKKMB"
                   color="#7C3AED"
-                  onClick={() => router.push('/')}
+                  onClick={() => router.push('/admin/content?tab=frames')}
                 />
                 <ActionCard
                   icon={<IconCalendar size={20} />}
                   label="Agenda"
                   desc="Kelola jadwal PKKMB"
                   color="#D4AF37"
-                  onClick={() => router.push('/agenda')}
+                  onClick={() => router.push('/admin/content?tab=agenda')}
                 />
                 <ActionCard
                   icon={<IconUsers size={20} />}

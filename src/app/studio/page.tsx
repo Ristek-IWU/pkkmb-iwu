@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import {
   Container,
   Title,
@@ -17,8 +17,10 @@ import { PhotoUploader } from "@/components/studio/PhotoUploader";
 import { CanvasControls } from "@/components/studio/CanvasControls";
 import { DownloadButton } from "@/components/studio/DownloadButton";
 import { CaptionGenerator } from "@/components/studio/CaptionGenerator";
+import { readAdminStorage } from "@/lib/admin-storage";
 
 export default function StudioPage() {
+  const [availableFrames, setAvailableFrames] = useState(frames);
   const [selectedFrame, setSelectedFrame] = useState<Frame | null>(null);
   const [photo, setPhoto] = useState<File | null>(null);
   const [zoom, setZoom] = useState(1);
@@ -27,6 +29,10 @@ export default function StudioPage() {
   const [hasPhoto, setHasPhoto] = useState(false);
 
   const canvasRef = useRef<any>(null);
+
+  useEffect(() => {
+    setAvailableFrames(readAdminStorage("pkkmb-admin-frames", frames));
+  }, []);
 
   const handleFrameSelect = useCallback((frame: Frame) => {
     setSelectedFrame(frame);
@@ -84,7 +90,7 @@ export default function StudioPage() {
               Pilih Frame
             </Text>
             <FrameSelector
-              frames={frames}
+              frames={availableFrames}
               selectedFrame={selectedFrame}
               onSelect={handleFrameSelect}
             />

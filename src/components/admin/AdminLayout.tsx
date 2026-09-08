@@ -19,12 +19,15 @@ import {
   IconUser,
   IconLogout,
   IconShieldCheck,
+  IconPhoto,
+  IconCalendarEvent,
+  IconBook,
 } from '@tabler/icons-react';
 import { clearSession, getSession } from '@/lib/auth/admin-auth';
 
 interface AdminLayoutProps {
   children: React.ReactNode;
-  activePage?: 'dashboard' | 'setup-face';
+  activePage?: 'dashboard' | 'setup-face' | 'frames' | 'agenda' | 'guide';
 }
 
 export function AdminLayout({ children, activePage = 'dashboard' }: AdminLayoutProps) {
@@ -119,6 +122,48 @@ export function AdminLayout({ children, activePage = 'dashboard' }: AdminLayoutP
                     activePage === 'setup-face'
                       ? 'rgba(212,175,55,0.1)'
                       : 'transparent',
+                },
+                label: { fontSize: 14 },
+              }}
+            />
+            <NavLink
+              label="Frame Twibbon"
+              leftSection={<IconPhoto size={16} />}
+              active={activePage === 'frames'}
+              onClick={() => router.push('/admin/content?tab=frames')}
+              styles={{
+                root: {
+                  borderRadius: 8,
+                  color: activePage === 'frames' ? '#D4AF37' : '#94A3B8',
+                  backgroundColor: activePage === 'frames' ? 'rgba(212,175,55,0.1)' : 'transparent',
+                },
+                label: { fontSize: 14 },
+              }}
+            />
+            <NavLink
+              label="Agenda"
+              leftSection={<IconCalendarEvent size={16} />}
+              active={activePage === 'agenda'}
+              onClick={() => router.push('/admin/content?tab=agenda')}
+              styles={{
+                root: {
+                  borderRadius: 8,
+                  color: activePage === 'agenda' ? '#D4AF37' : '#94A3B8',
+                  backgroundColor: activePage === 'agenda' ? 'rgba(212,175,55,0.1)' : 'transparent',
+                },
+                label: { fontSize: 14 },
+              }}
+            />
+            <NavLink
+              label="Panduan"
+              leftSection={<IconBook size={16} />}
+              active={activePage === 'guide'}
+              onClick={() => router.push('/admin/content?tab=guide')}
+              styles={{
+                root: {
+                  borderRadius: 8,
+                  color: activePage === 'guide' ? '#D4AF37' : '#94A3B8',
+                  backgroundColor: activePage === 'guide' ? 'rgba(212,175,55,0.1)' : 'transparent',
                 },
                 label: { fontSize: 14 },
               }}
