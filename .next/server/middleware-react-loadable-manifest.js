@@ -1,1 +1,1 @@
-self.__REACT_LOADABLE_MANIFEST="{\"components\\\\studio\\\\TwibbonCanvas.tsx -> fabric\":{\"id\":\"components\\\\studio\\\\TwibbonCanvas.tsx -> fabric\",\"files\":[\"static/chunks/_app-pages-browser_node_modules_fabric_dist_index_min_mjs.js\"]}}"
+self.__REACT_LOADABLE_MANIFEST='{"components\\\\studio\\\\TwibbonCanvas.tsx -> fabric":{"id":81377,"files":["static/chunks/0b465130.1ae67bfd9de4a7ea.js"]}}';
